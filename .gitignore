@@ -1,0 +1,41 @@
+# --- IDE & Build Artifacts ---
+# 忽略 Qt Creator 自动生成的用户配置和中间文件
+*.pro.user
+*.pro.user.*
+*.creator
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.lib
+*.exe
+
+# --- Build/Generated Directories ---
+# 默认的 CMake 构建目录
+build/
+# 如果您在 Qt Creator 中使用 debug/release 文件夹，也忽略掉
+Debug/
+Release/
+debug/
+release/
+bin/
+tmp/
+
+# --- CMake Generated Files ---
+# 忽略 CMake 自动生成的配置和 Makefile 文件
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# --- OS Specific Files ---
+# 忽略 Mac 系统文件
+.DS_Store
+# 忽略 Windows 缩略图缓存
+Thumbs.db
+
+# --- Other common IDE files (Optional) ---
+# 如果使用 VS Code ，可以忽略的配置文件夹
+.vscode/
+.idea/
