@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <QDebug>
 
 Game::Game() : status(NotStart), landlord(nullptr),
     curPlayer(nullptr), lastPlayer(nullptr),
@@ -112,6 +113,7 @@ void Game::CallLandlordPhase() {
 
         int score = curPlayer->CallLandlord(questioned, maxScore);
         callScores[questioned] = score;
+        qDebug() << "[CallLandlordPhase] AI 玩家" << curPlayer->GetId() << "叫分:" << score;
 
         if (score == 3) {
             landlord = curPlayer;
@@ -131,6 +133,7 @@ void Game::CallLandlordPhase() {
         int maxScore = 0;
         int maxIdx = -1;
         for (int i = 0; i < 3; ++i) {
+            
             if (callScores[i] > maxScore) {
                 maxScore = callScores[i];
                 maxIdx = i;
@@ -141,6 +144,7 @@ void Game::CallLandlordPhase() {
             landlord = players[maxIdx];
             baseScore = maxScore;
             status = Status::SendLandlordCard;
+            qDebug() << "[CallLandlordPhase] 地主确定为玩家" << maxIdx << "，分数:" << maxScore;
         } else {
             // 没人叫地主,重新开始
             GameStart();
@@ -149,7 +153,12 @@ void Game::CallLandlordPhase() {
 }
 
 void Game::PlayerCallLandlord(int score) {
-    if (status != Status::GetLandlord) return;
+    qDebug() << "[PlayerCallLandlord] 玩家叫分函数被调用，分数:" << score;
+
+    if (status != Status::GetLandlord) {
+        qDebug() << "[PlayerCallLandlord] 状态错误，当前状态:" << (int)status;
+        return;
+    }
 
     // 确保 curPlayer 已设置
     if (!curPlayer) {

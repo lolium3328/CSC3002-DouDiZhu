@@ -34,6 +34,7 @@ InGameScene::InGameScene(QWidget *parent)
     connect(ui->btn_play, &QPushButton::clicked, this, &InGameScene::onPlayClicked);
     connect(ui->btn_pass, &QPushButton::clicked, this, &InGameScene::onPassClicked);
     connect(ui->btn_hint, &QPushButton::clicked, this, &InGameScene::onHintClicked);
+    qDebug() << "我是新版本";
 }
 
 InGameScene::~InGameScene()
@@ -78,20 +79,32 @@ void InGameScene::setupUIForCurrentGame()
     {
         qDebug() << "[init] AI" << m_game.GetCurrentPlayer()->GetId() << "正在叫分...";
         m_game.CallLandlordPhase();
+
+        // 如果 AI 叫分后已经确定地主，直接进入发地主牌阶段
+        if (m_game.GetStatus() == Status::SendLandlordCard)
+        {
+            qDebug() << "[init] AI 已决定地主，发地主牌";
+            m_game.SendLandlordCard();
+            createLandlordPanels(true);
+            refreshPlayer0HandPanels();
+            hideCallButtons();
+            enterDiscardPhase();
+            return;
+        }
     }
 
-    // 5. 如果此时已经决定地主（可能是 AI 直接叫完了）
-    if (m_game.GetStatus() == Status::SendLandlordCard)
+    // 5. 如果轮到玩家 0，显示叫分按钮
+    if (m_game.GetStatus() == Status::GetLandlord &&
+        m_game.GetCurrentPlayer() &&
+        m_game.GetCurrentPlayer()->GetId() == 0)
     {
-        qDebug() << "[init] 已决定地主，发地主牌";
-        m_game.SendLandlordCard();
-        createLandlordPanels(true);
-        refreshPlayer0HandPanels();
-        hideCallButtons();
-        enterDiscardPhase();    // 直接进入出牌阶段
+        qDebug() << "[setupUIForCurrentGame] 轮到玩家 0 叫分";
+        ui->btn_notcall->show();
+        ui->btn_1p->show();
+        ui->btn_2p->show();
+        ui->btn_3p->show();
     }
 }
-
 void InGameScene::createLandlordPanels(bool faceUp)
 {
     // 清空旧的
@@ -166,9 +179,8 @@ void InGameScene::hideCallButtons()
     ui->btn_2p->hide();
     ui->btn_3p->hide();
 }
-void InGameScene::onCallScore(int score)
-{
-    qDebug() << "玩家叫分:" << score;
+void InGameScene::onCallScore(int score) {
+    qDebug() << "[onCallScore] 玩家点击叫分按钮，分数:" << score;
 
     m_game.PlayerCallLandlord(score);   // 只调这一句
 
