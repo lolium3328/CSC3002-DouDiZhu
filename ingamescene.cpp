@@ -51,6 +51,7 @@ void InGameScene::initGame()
     qDeleteAll(m_landlordPanels);
     m_handPanels.clear();
     m_landlordPanels.clear();
+    setStatusText("Status: New Game Start");
 
     // 重新开局：洗牌 + 发牌 + 设置叫地主起始玩家
     qDebug() << "===== GameStart() 新一局 =====";
@@ -78,12 +79,14 @@ void InGameScene::setupUIForCurrentGame()
            m_game.GetCurrentPlayer()->GetId() != 0)
     {
         qDebug() << "[init] AI" << m_game.GetCurrentPlayer()->GetId() << "正在叫分...";
+        setStatusText("Status: AI calling...");
         m_game.CallLandlordPhase();
 
         // 如果 AI 叫分后已经确定地主，直接进入发地主牌阶段
         if (m_game.GetStatus() == Status::SendLandlordCard)
         {
             qDebug() << "[init] AI 已决定地主，发地主牌";
+            setStatusText("Status: Game start!");
             m_game.SendLandlordCard();
             createLandlordPanels(true);
             refreshPlayer0HandPanels();
@@ -99,6 +102,7 @@ void InGameScene::setupUIForCurrentGame()
         m_game.GetCurrentPlayer()->GetId() == 0)
     {
         qDebug() << "[setupUIForCurrentGame] 轮到玩家 0 叫分";
+        setStatusText("Status: You Call!");
         ui->btn_notcall->show();
         ui->btn_1p->show();
         ui->btn_2p->show();
@@ -251,6 +255,7 @@ void InGameScene::enterDiscardPhase()
     if (cur->GetId() == 0)
     {
         qDebug() << "轮到玩家出牌";
+        setStatusText("Status: Your Turn!");
         ui->btn_play->show();
         ui->btn_pass->show();
         ui->btn_hint->show();
@@ -262,6 +267,7 @@ void InGameScene::enterDiscardPhase()
 
     // AI 回合（加 2 秒延迟）
     qDebug() << "轮到 AI" << cur->GetId() << " 出牌，2 秒后执行";
+    setStatusText(QString("Status： AI%1 Play…").arg(cur->GetId()));
     ui->btn_play->hide();
     ui->btn_pass->hide();
     ui->btn_hint->hide();
@@ -461,7 +467,10 @@ void InGameScene::onHintClicked()
     // TODO: 从 Player::GetSelection() 中获取提示牌并高亮对应 CardPanel
     qDebug() << "提示功能待完善：可以从 Player::GetSelection() 获取提示牌并高亮";
 }
-
+void InGameScene::setStatusText(const QString &text)
+{
+    ui->label_status->setText(text);
+}
 
 
 

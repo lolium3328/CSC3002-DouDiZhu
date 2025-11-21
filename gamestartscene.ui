@@ -29,19 +29,20 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>250</x>
-     <y>160</y>
-     <width>301</width>
-     <height>111</height>
+     <x>50</x>
+     <y>120</y>
+     <width>701</width>
+     <height>191</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>24</pointsize>
+     <family>Ravie</family>
+     <pointsize>72</pointsize>
     </font>
    </property>
    <property name="text">
-    <string>TextLabel</string>
+    <string>DOUDIZHU</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>

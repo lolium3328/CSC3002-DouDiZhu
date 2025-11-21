@@ -133,7 +133,7 @@ void Game::CallLandlordPhase() {
         int maxScore = 0;
         int maxIdx = -1;
         for (int i = 0; i < 3; ++i) {
-            
+
             if (callScores[i] > maxScore) {
                 maxScore = callScores[i];
                 maxIdx = i;
@@ -338,4 +338,5 @@ const CardGroup& Game::GetLastDiscard() const {
     static CardGroup empty;
     return empty;
 }
+
 

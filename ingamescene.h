@@ -36,6 +36,7 @@ private:
     void refreshPlayer0HandPanels();            // 刷新玩家 0 手牌布局
     void hideCallButtons();                     // 藏掉叫地主按钮
     void enterDiscardPhase();                   // 进入出牌阶段（UI 逻辑）
+    void setStatusText(const QString &text);    //状态文字喵
 
     // —— UI：删除玩家刚刚出掉的牌 ——
     void applyPlayerDiscardToUI(const std::vector<int>& indices);

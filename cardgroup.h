@@ -1,5 +1,11 @@
 #ifndef CARDGROUP_H
 #define CARDGROUP_H
+
+
+#include <map>
+#include <set>
+#include <vector>
+
 /**
  * 牌型枚举
  */
