@@ -43,8 +43,9 @@
    </property>
    <property name="font">
     <font>
-     <family>OCR A</family>
+     <family>Britannic</family>
      <pointsize>72</pointsize>
+     <bold>true</bold>
     </font>
    </property>
    <property name="text">

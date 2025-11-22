@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <QDebug>
 #include <QTimer>
+#include <QLabel>
+#include <QFont>
+#include <QPropertyAnimation>
+#include <QEasingCurve>
+#include <QAbstractAnimation>
+
+
 
 #include "winscene.h"
 #include "losescene.h"
@@ -109,6 +116,7 @@ void InGameScene::setupUIForCurrentGame()
         ui->btn_3p->show();
     }
 }
+
 void InGameScene::createLandlordPanels(bool faceUp)
 {
     // 清空旧的
@@ -118,6 +126,14 @@ void InGameScene::createLandlordPanels(bool faceUp)
     int topY    = 60;
     int centerX = width() / 2;
     int spacing = 40;
+    const double scale = 0.8;
+    // 基准尺寸
+    const int baseCardW = 70;
+    const int baseCardH = 105;
+
+    // 缩小后的尺寸
+    const int cardW = static_cast<int>(baseCardW * scale);
+    const int cardH = static_cast<int>(baseCardH * scale);
 
     for (int i = 0; i < 3; ++i)
     {
@@ -127,7 +143,11 @@ void InGameScene::createLandlordPanels(bool faceUp)
         p->setCardId(id);
         p->setFaceUp(faceUp);
 
-        int x = centerX + (i - 1) * spacing - p->width() / 2;
+        // 设置缩小后的尺寸
+        p->setFixedSize(cardW, cardH);
+
+        // 调整位置
+        int x = centerX + (i - 1) * spacing - cardW / 2;
         p->move(x, topY);
         p->show();
 
@@ -148,8 +168,8 @@ void InGameScene::createPlayer0HandPanels()
         return CardGroup::Translate(a) < CardGroup::Translate(b);
     });
 
-    int spacing    = 30;
-    int leftMargin = 40;
+    int spacing    = 35;
+    int leftMargin = 30;
     int baseY      = height() - 150;
 
     for (int i = 0; i < (int)sorted.size(); ++i)
@@ -174,13 +194,13 @@ void InGameScene::refreshPlayer0HandPanels()
     createPlayer0HandPanels();
 }
 
-void InGameScene::hideCallButtons()
-{
+void InGameScene::hideCallButtons(){
     ui->btn_notcall->hide();
     ui->btn_1p->hide();
     ui->btn_2p->hide();
     ui->btn_3p->hide();
 }
+
 void InGameScene::onCallScore(int score) {
     qDebug() << "[onCallScore] 玩家点击叫分按钮，分数:" << score;
 
@@ -270,31 +290,33 @@ void InGameScene::enterDiscardPhase()
     ui->btn_pass->hide();
     ui->btn_hint->hide();
 
-    QTimer::singleShot(2000, this, [this]() {
-        if (m_game.GetStatus() != Status::Discard)
-            return;
+    Player* curAI = m_game.GetCurrentPlayer();
+    int aiId = curAI->GetId();
 
-        Player* curAI = m_game.GetCurrentPlayer();
-        if (!curAI || curAI->GetId() == 0)
-        {
-            // 这 2 秒内有可能游戏结束或轮到玩家了
-            enterDiscardPhase();
-            return;
+    QTimer::singleShot(1500, this, [this, curAI, aiId]() {
+        if (m_game.GetStatus() != Status::Discard) return;
+
+        // 调用前后的 lastPlayer 用来判断 AI 是出牌还是过牌
+        Player* beforeLast = m_game.GetLastPlayer();
+
+        m_game.DiscardPhase(); // 让当前 AI 自动决定出牌或过牌
+
+        Player* newLast = m_game.GetLastPlayer();
+        const CardGroup& grp = m_game.GetLastDiscard();
+
+        if (newLast == curAI && grp.GetCount() > 0) {
+            // 说明这次是 curAI 出牌了
+            showLastPlayForPlayer(curAI);
+        } else {
+            // lastPlayer 没变，或者没有出任何牌 => 认为是“过”
+            showPassForPlayer(curAI);
         }
 
-        qDebug() << "AI" << curAI->GetId() << " 开始出牌";
-
-        clearLastPlay();       // 先清空上一次显示，避免叠加
-
-        m_game.DiscardPhase(); // 让 Game 内部按规则出牌 / 过牌（可能连着几个 AI）
-
-        showLastPlay();        // 在中间显示“上家出的牌”
         updateAiRemainLabels();
-
-        // 继续下一位（可能又是 AI，也可能轮到玩家）
         enterDiscardPhase();
     });
 }
+
 
 
 void InGameScene::onCardClicked()
@@ -336,57 +358,208 @@ void InGameScene::applyPlayerDiscardToUI(const std::vector<int>& indices)
 }
 
 // —— 清空“上家出的牌”的显示 ——
-void InGameScene::clearLastPlay()
+// 清空指定玩家的出牌槽
+void InGameScene::clearLastPlayForPlayer(int playerId)
 {
-    qDeleteAll(m_lastPlayPanels);
-    m_lastPlayPanels.clear();
+    if (playerId < 0 || playerId >= 3) return;
+    qDeleteAll(m_lastPlayPanels[playerId]);
+    m_lastPlayPanels[playerId].clear();
 }
 
-// —— 根据 Game::GetLastDiscard() 把“上家出的牌”显示在中间 ——
+// 清空所有玩家的出牌槽 + “不出”提示
+void InGameScene::clearLastPlay()
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        clearLastPlayForPlayer(i);
+        if (m_passLabels[i]) {
+            m_passLabels[i]->hide();
+        }
+    }
+}
+
+// 计算每个玩家出牌区域的中心点位置
+// 计算每个玩家出牌区域的中心点位置
+// 注意：这里的坐标要和 showLastPlayForPlayer 里牌的摆放保持一致，
+// 这样“不出”就会正好出现在你现在出牌区域的位置上。
+QPoint InGameScene::getPlayAreaBasePos(int playerId) const
+{
+    int w = width();
+    int h = height();
+
+    // 和 showLastPlayForPlayer 里保持同一套尺寸参数
+    const int baseCardW   = 70;
+    const int baseCardH   = 105;
+    const double scale    = m_lastPlayScale;               // 出牌区缩放比例
+    const int cardW       = static_cast<int>(baseCardW * scale);
+    const int cardH       = static_cast<int>(baseCardH * scale);
+
+    switch (playerId) {
+    case 0: // 自己：整排居中，按钮上方一点
+        // showLastPlayForPlayer 里：y = h - 260 - cardH/2，所以中心 y 就是 h - 260
+        // x 居中，所以中心 x = w / 2
+        return QPoint(w / 2, h - 260);
+
+    case 1: // AI1：左侧，第一张牌左边距 40
+        // showLastPlayForPlayer：startX = 40, y = h/2 - cardH/2 - 80
+        // 一张牌的中心 ≈ (40 + cardW/2, h/2 - 80)
+        return QPoint(40 + cardW / 2, h / 2 - 80);
+
+    case 2: // AI2：右侧，最后一张牌右边距 40
+        // showLastPlayForPlayer：startX = w - 40 - groupWidth
+        // 近似用“最后一张牌中心”：(w - 40 - cardW/2, h/2 - 80)
+        return QPoint(w - 40 - cardW / 2, h / 2 - 80);
+
+    default:
+        return QPoint(w / 2, h / 2);
+    }
+}
+
+
+
+void InGameScene::showLastPlayForPlayer(Player* player)
+{
+    if (!player) return;
+
+    int pid = player->GetId();
+    if (pid < 0 || pid >= 3) return;
+
+    // 清掉这个玩家之前的出牌 & “不出”
+    clearLastPlayForPlayer(pid);
+    if (m_passLabels[pid]) {
+        m_passLabels[pid]->hide();
+    }
+
+    const CardGroup& grp = player->GetLastDiscard();
+    if (grp.GetCount() == 0) {
+        qDebug() << "showLastPlayForPlayer: player" << pid << " 出牌数 = 0";
+        return;
+    }
+
+    // 拿到这次出的所有牌，并按点数从小到大排一下，方便排版
+    std::vector<int> cards(grp.GetCards().begin(), grp.GetCards().end());
+    std::sort(cards.begin(), cards.end(), [](int a, int b) {
+        return CardGroup::Translate(a) < CardGroup::Translate(b);
+    });
+
+    int count = static_cast<int>(cards.size());
+    if (count == 0) return;
+
+    // 基准按手牌大小来：CardPanel 现在是 70x105
+    const int baseCardW    = 70;
+    const int baseCardH    = 105;
+    const int baseSpacing  = 40;    // 牌之间的间距（你之前写的 40）
+
+    // 出牌区缩放比例（在 InGameScene 里设置，比如 0.75）
+    const double scale = m_lastPlayScale;   // 建议 m_lastPlayScale = 0.75;
+
+    const int cardW   = static_cast<int>(baseCardW   * scale);
+    const int cardH   = static_cast<int>(baseCardH   * scale);
+    const int spacing = static_cast<int>(baseSpacing * scale);
+
+    // 一整排的总宽度
+    const int groupWidth = cardW + (count - 1) * spacing;
+
+    const int w = width();
+    const int h = height();
+
+    int startX = 0;   // 第一张牌的左上角 x
+    int y      = 0;   // 左上角 y
+
+    switch (pid) {
+    case 0: // 自己：整排居中，按钮上方一点
+        startX = (w - groupWidth) / 2;
+        y      = h - 260 - cardH / 2;
+        break;
+    case 1: // AI1：左侧，第一张牌左边距 40
+        startX = 40;
+        y      = h / 2 - cardH / 2 - 80;
+        break;
+    case 2: // AI2：右侧，最后一张牌右边距 40
+        startX = w - 40 - groupWidth;
+        y      = h / 2 - cardH / 2 - 80;
+        break;
+    default:
+        startX = (w - groupWidth) / 2;
+        y      = h / 2 - cardH / 2;
+        break;
+    }
+
+    qDebug() << "在玩家" << pid << "旁边显示出牌, 张数:" << count
+             << " 起点:" << startX << "," << y
+             << " groupWidth:" << groupWidth
+             << " cardSize:" << cardW << "x" << cardH;
+    int offset       = 80;  // 飞进来的距离
+    int delayPerCard = 40;  // 每张牌之间相差
+
+    for (int i = 0; i < count; ++i)
+    {
+        CardPanel* p = new CardPanel(this);
+        p->setCardId(cards[i]);
+        p->setFaceUp(true);
+        p->setSelected(false);
+        p->setEnabled(false); // 展示，不可点
+
+        p->setFixedSize(cardW, cardH);
+
+        // 你原来算好的“最终位置”
+        QRect endRect(
+            startX + i * spacing, // x
+            y,                    // y
+            cardW,
+            cardH
+            );
+
+        // 起始位置：在最终位置的基础上挪一点，当作“飞进来的起点”
+        QRect startRect = endRect;
+        if (pid == 0) {
+            startRect.translate(0, offset);        // 自己：从下面往上飞
+        } else if (pid == 1) {
+            startRect.translate(-offset, 0);       // 左边 AI：从左往右飞
+        } else if (pid == 2) {
+            startRect.translate(offset, 0);        // 右边 AI：从右往左飞
+        }
+
+        p->setGeometry(startRect);
+        p->show();
+
+        // 为这一张牌创建一个动画
+        auto *anim = new QPropertyAnimation(p, "geometry", this);
+        anim->setDuration(250);                          // 单张牌动画时长
+        anim->setStartValue(startRect);
+        anim->setEndValue(endRect);
+        anim->setEasingCurve(QEasingCurve::OutCubic);
+
+        // 关键：按顺序延迟启动，让牌一张一张滑进来
+        int delay = i * delayPerCard; // 第 i 张牌延迟 i*60 ms
+        QTimer::singleShot(delay, this, [anim]() {
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+        });
+
+        m_lastPlayPanels[pid].append(p);
+    }
+
+}
+
+
+
+// 根据 Game::GetLastPlayer / GetLastDiscard 决定给谁画
 void InGameScene::showLastPlay()
 {
-    clearLastPlay();
-
-    const CardGroup &grp = m_game.GetLastDiscard();
     Player* last = m_game.GetLastPlayer();
+    const CardGroup& grp = m_game.GetLastDiscard();
 
     if (!last) {
         qDebug() << "showLastPlay: lastPlayer 为 null";
         return;
     }
-
-    if (grp.GetCount() == 0)
-    {
-        qDebug() << "showLastPlay: 上家玩家ID =" << last->GetId()
-                << " 出牌数 = 0（可能是 pass）";
+    if (grp.GetCount() == 0) {
+        qDebug() << "showLastPlay: lastPlayer =" << last->GetId()
+        << " 出牌数 = 0（可能是 pass）";
         return;
     }
 
-    std::vector<int> cards(grp.GetCards().begin(), grp.GetCards().end());
-    std::sort(cards.begin(), cards.end(), [](int a, int b){
-        return CardGroup::Translate(a) < CardGroup::Translate(b);
-    });
-
-    int count   = (int)cards.size();
-    int centerX = width() / 2;
-    int baseY   = height() / 2 - 80;
-    int spacing = 30;
-
-    qDebug() << "在中间显示上家出牌, 玩家ID:" << last->GetId()
-             << ", 张数:" << count;
-
-    for (int i = 0; i < count; ++i)
-    {
-        CardPanel *p = new CardPanel(this);
-        p->setCardId(cards[i]);
-        p->setFaceUp(true);
-
-        int x = centerX + (i - count/2.0) * spacing - p->width()/2;
-        p->move(x, baseY);
-        p->show();
-
-        m_lastPlayPanels.append(p);
-    }
+    showLastPlayForPlayer(last);
 }
 
 // —— 更新两个 AI 的剩余牌数（使用你在 .ui 里放的 label） ——
@@ -401,12 +574,10 @@ void InGameScene::updateAiRemainLabels()
     int r1 = ai1->GetRemain();
     int r2 = ai2->GetRemain();
 
-    ui->label_ai1Remain->setText(
-        QString("AI1 剩余: %1").arg(r1)
-        );
-    ui->label_ai2Remain->setText(
-        QString("AI2 剩余: %1").arg(r2)
-        );
+    ui->label_ai1Remain->setText(QString("%1").arg(r1));
+    ui->label_ai1Remain->setStyleSheet("color: white;");
+    ui->label_ai2Remain->setText(QString("%1").arg(r2));
+    ui->label_ai2Remain->setStyleSheet("color: white;");
 
     qDebug() << "updateAiRemainLabels: AI1 =" << r1 << ", AI2 =" << r2;
 }
@@ -425,11 +596,6 @@ void InGameScene::onPlayClicked()
         return;
     }
 
-    clearLastPlay();  // 防止上一次显示和这次叠在一起
-
-    // 🔴 注意：这里假设 Game::PlayerDiscard 返回 bool，
-    // 如果你现在还是 void，可以先改成 bool 版本；
-    // 或者临时把下面当成“必定成功”的用法。
     bool ok = m_game.PlayerDiscard(indices);
 
     if (!ok) {
@@ -440,22 +606,38 @@ void InGameScene::onPlayClicked()
     // UI 删除出掉的牌
     applyPlayerDiscardToUI(indices);
 
-    // 更新中间“上家出的牌”
-    showLastPlay();
+    // 在玩家自己下方显示刚出的牌
+    Player* last = m_game.GetLastPlayer();
+    if (last && last->GetId() == 0) {
+        showLastPlayForPlayer(last);
+    }
 
     updateAiRemainLabels();
 
-    // Game 内部已自动把轮到下一位（包括 AI 的 DiscardPhase），此处只需要继续处理阶段
+    // 轮到下一位（可能是 AI，也可能又轮到人）
     enterDiscardPhase();
+
 }
 
 void InGameScene::onPassClicked()
 {
     qDebug() << "玩家选择过牌";
+
+    Player* before = m_game.GetCurrentPlayer();
+
     m_game.PlayerPass();
-    // 过牌后，上家出牌区域仍显示上一手，所以不调用 showLastPlay()
+
+    Player* after = m_game.GetCurrentPlayer();
+
+    // 只有 curPlayer 真正交给了下一位，才认为 pass 成功
+    if (before && before != after && before->GetId() == 0) {
+        showPassForPlayer(before);
+    }
+
     enterDiscardPhase();
 }
+
+
 
 void InGameScene::onHintClicked()
 {
@@ -509,6 +691,39 @@ void InGameScene::onHintClicked()
 void InGameScene::setStatusText(const QString &text)
 {
     ui->label_status->setText(text);
+}
+
+void InGameScene::showPassForPlayer(Player* player)
+{
+    if (!player) return;
+    int pid = player->GetId();
+    if (pid < 0 || pid >= 3) return;
+
+    // 过牌时要清掉该玩家上一手出的牌
+    clearLastPlayForPlayer(pid);
+
+    // 第一次用的时候创建 QLabel
+    if (!m_passLabels[pid]) {
+        m_passLabels[pid] = new QLabel(this);
+        m_passLabels[pid]->setText(QStringLiteral("不出"));
+
+        QFont f = m_passLabels[pid]->font();
+        f.setPointSize(14);
+        f.setBold(true);
+        m_passLabels[pid]->setFont(f);
+
+        m_passLabels[pid]->setStyleSheet("color: red;");
+        m_passLabels[pid]->setAlignment(Qt::AlignCenter);
+        m_passLabels[pid]->setFixedSize(60, 30);
+    }
+
+    // 放到对应玩家的出牌区域中心
+    QPoint center = getPlayAreaBasePos(pid);
+    int x = center.x() - m_passLabels[pid]->width()  / 2;
+    int y = center.y() - m_passLabels[pid]->height() / 2;
+
+    m_passLabels[pid]->move(x, y);
+    m_passLabels[pid]->show();
 }
 
 

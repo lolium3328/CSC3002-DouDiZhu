@@ -55,5 +55,6 @@
         <file>54png/QS.png</file>
         <file>54png/SJ.png</file>
         <file>54png/BACK.png</file>
+        <file>54png/small.png</file>
     </qresource>
 </RCC>

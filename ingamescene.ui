@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>200</x>
-     <y>320</y>
+     <y>330</y>
      <width>414</width>
      <height>80</height>
     </rect>
@@ -105,7 +105,7 @@
    <property name="geometry">
     <rect>
      <x>260</x>
-     <y>370</y>
+     <y>380</y>
      <width>291</width>
      <height>51</height>
     </rect>
@@ -173,10 +173,10 @@
   <widget class="QLabel" name="label_ai1Remain">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>100</y>
-     <width>211</width>
-     <height>31</height>
+     <x>50</x>
+     <y>60</y>
+     <width>30</width>
+     <height>60</height>
     </rect>
    </property>
    <property name="font">
@@ -185,16 +185,16 @@
     </font>
    </property>
    <property name="text">
-    <string>AI1 left: 17</string>
+    <string>17</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_ai2Remain">
    <property name="geometry">
     <rect>
-     <x>650</x>
-     <y>100</y>
-     <width>141</width>
-     <height>31</height>
+     <x>720</x>
+     <y>60</y>
+     <width>30</width>
+     <height>60</height>
     </rect>
    </property>
    <property name="font">
@@ -203,7 +203,7 @@
     </font>
    </property>
    <property name="text">
-    <string>AI2 left: 17</string>
+    <string>17</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_status">
@@ -217,7 +217,7 @@
    </property>
    <property name="font">
     <font>
-     <family>OCR A</family>
+     <family>Cascadia Code</family>
      <pointsize>16</pointsize>
     </font>
    </property>
@@ -228,7 +228,102 @@
     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
    </property>
   </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>60</y>
+     <width>41</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap resource="cardsimage.qrc">:/cards/54png/small.png</pixmap>
+   </property>
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>710</x>
+     <y>60</y>
+     <width>41</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap resource="cardsimage.qrc">:/cards/54png/small.png</pixmap>
+   </property>
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_status_2">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>120</y>
+     <width>261</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Cascadia Code</family>
+     <pointsize>16</pointsize>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>AI 1</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_status_3">
+   <property name="geometry">
+    <rect>
+     <x>710</x>
+     <y>120</y>
+     <width>140</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Cascadia Code</family>
+     <pointsize>16</pointsize>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>AI 2</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <zorder>label_2</zorder>
+  <zorder>label</zorder>
+  <zorder>horizontalLayoutWidget</zorder>
+  <zorder>horizontalLayoutWidget_2</zorder>
+  <zorder>label_ai1Remain</zorder>
+  <zorder>label_ai2Remain</zorder>
+  <zorder>label_status</zorder>
+  <zorder>label_status_2</zorder>
+  <zorder>label_status_3</zorder>
  </widget>
- <resources/>
+ <resources>
+  <include location="cardsimage.qrc"/>
+ </resources>
  <connections/>
 </ui>
