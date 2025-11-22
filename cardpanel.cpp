@@ -2,6 +2,12 @@
 #include <QPainter>
 #include <QMouseEvent>
 
+// 静态变量初始化
+QPoint CardPanel::s_dragStart;
+QPoint CardPanel::s_dragEnd;
+bool   CardPanel::s_dragging = false;
+CardPanel* CardPanel::s_lastHoverPanel = nullptr;
+
 CardPanel::CardPanel(QWidget *parent)
     : QWidget(parent)
 {
@@ -39,7 +45,7 @@ void CardPanel::setSelected(bool sel)
 //   点数: 3 4 5 6 7 8 9 10 J Q K A 2
 //   花色: C = 梅花 ♣, D = 方块 ♦, H = 红桃 ♥, S = 黑桃 ♠
 //
-//   例如：3C.png, 10H.png, JD.png, AS.png, 2C.png ...
+//   例如：3C.png, 10H.png, JD.png, AS.png, 2C.png .
 //
 //  小王: SJ.png    (Small Joker)
 //  大王: BJ.png    (Big  Joker)
@@ -47,7 +53,7 @@ void CardPanel::setSelected(bool sel)
 //  资源文件 cardsimage.qrc 里：
 //   <qresource prefix="/cards">
 //       <file>3C.png</file>
-//       ...
+//       .
 //       <file>SJ.png</file>
 //       <file>BJ.png</file>
 //       <file>BACK.png</file>
@@ -134,9 +140,58 @@ void CardPanel::paintEvent(QPaintEvent *event)
 
 }
 
+// ===== 鼠标事件：支持“按住左键横划多选” =====
+
 void CardPanel::mousePressEvent(QMouseEvent *event)
 {
-    emit clicked(event->button());
+    if (event->button() == Qt::LeftButton) {
+        // 开始滑选
+        s_dragging = true;
+        s_dragStart = event->pos();
+        s_dragEnd   = event->pos();
+        s_lastHoverPanel = this;
+
+        // 先点当前这张牌，让它弹起 / 取消弹起
+        emit clicked(Qt::LeftButton);
+    } else {
+        // 其他按键按原样转发
+        emit clicked(event->button());
+    }
+
     QWidget::mousePressEvent(event);
 }
 
+void CardPanel::mouseMoveEvent(QMouseEvent *event)
+{
+    if (s_dragging && (event->buttons() & Qt::LeftButton)) {
+        s_dragEnd = event->pos();
+
+        QWidget *parent = parentWidget();
+        if (parent) {
+            // 当前鼠标位置映射到父窗口坐标
+            QPoint parentPos = mapToParent(event->pos());
+
+            // 找到父窗口里这个位置下的子控件
+            QWidget *child = parent->childAt(parentPos);
+            CardPanel *panel = qobject_cast<CardPanel*>(child);
+
+            // 划到了新的牌，就“点”一下它
+            if (panel && panel != s_lastHoverPanel) {
+                s_lastHoverPanel = panel;
+                panel->clicked(Qt::LeftButton);  // 触发该牌的 clicked 信号
+            }
+        }
+    }
+
+    QWidget::mouseMoveEvent(event);
+}
+
+void CardPanel::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && s_dragging) {
+        s_dragging = false;
+        s_lastHoverPanel = nullptr;
+    }
+
+    QWidget::mouseReleaseEvent(event);
+}

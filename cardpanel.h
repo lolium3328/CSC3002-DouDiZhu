@@ -4,6 +4,7 @@
 
 #include <QWidget>
 #include <QPixmap>
+#include <QPoint>
 
 class CardPanel : public QWidget
 {
@@ -30,14 +31,16 @@ signals:
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
     // 固定牌大小（你可以自己改，比如 80x120）
-    static constexpr int CARD_WIDTH  = 60;
-    static constexpr int CARD_HEIGHT = 90;
+    static constexpr int CARD_WIDTH  = 70;
+    static constexpr int CARD_HEIGHT = 105;
 
-    int  m_id      = -1;    // 牌号：0~53
-    bool m_faceUp  = true;  // 是否显示正面
+    int  m_id       = -1;   // 牌号：0~53
+    bool m_faceUp   = true; // 是否显示正面
     bool m_selected = false;
 
     QPixmap m_front;        // 这张牌的正面图片（根据 id 加载）
@@ -47,6 +50,13 @@ private:
 
     // 懒加载牌背（函数内部 static，避免 QPixmap 全局构造）
     static QPixmap &backPixmap();
+
+    // 鼠标滑选相关
+    static QPoint s_dragStart;       // 鼠标拖动起始点（目前只是记录，不参与逻辑）
+    static QPoint s_dragEnd;         // 鼠标拖动当前位置
+    static bool   s_dragging;        // 是否正在拖动
+    static CardPanel* s_lastHoverPanel; // 当前滑选时最后划到的那张牌
 };
 
 #endif // CARDPANEL_H
+

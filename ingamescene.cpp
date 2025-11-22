@@ -158,14 +158,12 @@ void InGameScene::createPlayer0HandPanels()
 
         auto *p = new CardPanel(this);
         p->setCardId(id);
-        p->setFaceUp(true);  // 手牌都是正面
+        p->setFaceUp(true);
 
         p->move(leftMargin + i * spacing, baseY);
         p->show();
 
-        // 点击牌 = 选中/取消选中 + 上下移动
-        connect(p, &CardPanel::clicked,
-                this, &InGameScene::onCardClicked);
+        connect(p, &CardPanel::clicked, this, &InGameScene::onCardClicked);
 
         m_handPanels.append(p);
     }
@@ -462,16 +460,56 @@ void InGameScene::onPassClicked()
 void InGameScene::onHintClicked()
 {
     qDebug() << "玩家请求提示";
+
+    // 1. 先把当前已经弹起的牌全部放回去（清空 UI 选中状态）
+    int baseY = height() - 150;   // 和 createPlayer0HandPanels / applyPlayerDiscardToUI 里保持一致
+    for (CardPanel* panel : std::as_const(m_handPanels))
+    {
+        if (panel->isSelected())
+        {
+            panel->setSelected(false);
+            panel->move(panel->x(), baseY);   // 往下放 20 像素
+        }
+    }
+
+    // 2. 调用游戏逻辑生成提示（会把提示方案写进玩家的 selection）
     m_game.PlayerHint();
 
-    // TODO: 从 Player::GetSelection() 中获取提示牌并高亮对应 CardPanel
-    qDebug() << "提示功能待完善：可以从 Player::GetSelection() 获取提示牌并高亮";
+    // 3. 读取玩家当前的 selection
+    Player* human = m_game.GetPlayer(0);
+    if (!human) {
+        qDebug() << "Hint: human player is null?";
+        return;
+    }
+
+    const CardGroup& sel = human->GetSelection();
+    const std::set<int>& hintCards = sel.GetCards();
+
+    if (hintCards.empty()) {
+        qDebug() << "Hint: 没有可以提示的牌（可能是压不上，建议过牌）";
+        return;
+    }
+
+    // 4. 遍历手牌面板，凡是牌号在 hintCards 里的，就弹起来
+    for (CardPanel* panel : std::as_const(m_handPanels))
+    {
+        // 这里用的是你 CardPanel 里的 cardId() 接口
+        int id = panel->cardId();
+        if (hintCards.find(id) != hintCards.end())
+        {
+            if (!panel->isSelected())
+            {
+                panel->setSelected(true);
+                panel->move(panel->x(), panel->y() - 20);  // 往上弹 20 像素
+            }
+        }
+    }
 }
+
 void InGameScene::setStatusText(const QString &text)
 {
     ui->label_status->setText(text);
 }
-
 
 
 
