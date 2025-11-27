@@ -1,6 +1,7 @@
 #include "selectscene.h"
 #include "ui_selectscene.h"
 #include "ingamescene.h"
+#include "audiomanager.h"
 
 SelectScene::SelectScene(QWidget *parent)
     : QDialog(parent)
@@ -18,6 +19,7 @@ SelectScene::~SelectScene()
 //都跳转到游戏界面
 void SelectScene::on_easy_clicked()
 {
+    AudioManager::instance().stopBgm();
     InGameScene *w = new InGameScene();
     w -> show();
     this -> hide();
@@ -26,6 +28,7 @@ void SelectScene::on_easy_clicked()
 
 void SelectScene::on_median_clicked()
 {
+    AudioManager::instance().stopBgm();
     InGameScene *w = new InGameScene();
     w -> show();
     this -> hide();

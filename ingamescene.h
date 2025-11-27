@@ -71,6 +71,7 @@ private slots:
     void onPlayClicked();       // 出牌
     void onPassClicked();       // 过牌
     void onHintClicked();       // 提示（后面可以完善）
+    void on_btn_set_clicked();
 };
 
 

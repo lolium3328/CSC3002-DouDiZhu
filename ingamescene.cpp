@@ -14,6 +14,8 @@
 
 #include "winscene.h"
 #include "losescene.h"
+#include "audiomanager.h"
+#include "settings.h"
 
 InGameScene::InGameScene(QWidget *parent)
     : QDialog(parent)
@@ -22,6 +24,11 @@ InGameScene::InGameScene(QWidget *parent)
     ui->setupUi(this);
     this->setWindowTitle("InGame");
     this->setFixedSize(800, 600);
+
+    AudioManager::instance().playBgm(
+        "qrc:/sounds/music/normal.Mp3",
+        true
+        );
 
     // 一开始先把出牌按钮隐藏（只在出牌阶段 / 玩家回合显示）
     ui->btn_play->hide();
@@ -329,6 +336,16 @@ void InGameScene::onCardClicked()
 
     int dy = sel ? -20 : 20;
     panel->move(panel->x(), panel->y() + dy);
+    if (sel) {
+        AudioManager::instance().playEffect(
+            "qrc:/sounds/music/select.mp3"
+            );
+    }
+    if(dy){
+        AudioManager::instance().playEffect(
+            "qrc:/sounds/music/unselected.mp3"
+            );
+    }
 }
 
 // —— UI 删除玩家刚刚出掉的牌 ——
@@ -728,4 +745,13 @@ void InGameScene::showPassForPlayer(Player* player)
 
 
 
+
+
+void InGameScene::on_btn_set_clicked()
+{
+
+    auto *dlg = new settings(this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose); // 关窗时自动 delete
+    dlg->show();
+}
 

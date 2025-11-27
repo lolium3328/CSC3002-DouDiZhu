@@ -56,5 +56,16 @@
         <file>54png/SJ.png</file>
         <file>54png/BACK.png</file>
         <file>54png/small.png</file>
+        <file>54png/setting.png</file>
+    </qresource>
+    <qresource prefix="/sounds">
+        <file>music/strart.Mp3</file>
+        <file>music/lose.Mp3</file>
+        <file>music/normal.Mp3</file>
+        <file>music/normal1.Mp3</file>
+        <file>music/normal3.Mp3</file>
+        <file>music/win.Mp3</file>
+        <file>music/select.mp3</file>
+        <file>music/unselected.mp3</file>
     </qresource>
 </RCC>
